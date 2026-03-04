@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>Saiyasone Farm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&family=Open+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{font-size:15px;}
@@ -15,6 +15,13 @@ body{background:#f0f4f8;font-family:'DM Mono',monospace;color:#0d1b2a;min-height
 .hdr-icon{font-size:32px;display:block;margin-bottom:5px;}
 .hdr h1{font-family:'Playfair Display',serif;font-size:1.55rem;font-weight:900;color:#fff;line-height:1.1;}
 .hdr p{margin-top:4px;font-size:0.62rem;color:#a8c4e8;letter-spacing:2px;text-transform:uppercase;}
+.hdr-sync{margin-top:8px;font-size:0.6rem;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.15);color:#a8c4e8;}
+.hdr-sync .dot{width:7px;height:7px;border-radius:50%;background:#a8c4e8;}
+.hdr-sync.connected .dot{background:#4ade80;animation:pulse 2s infinite;}
+.hdr-sync.connected{color:#4ade80;}
+.hdr-sync.error .dot{background:#f87171;}
+.hdr-sync.error{color:#f87171;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 .tabs{display:flex;gap:2px;margin-bottom:14px;background:#dbe6f4;padding:3px;border-radius:9px;}
 .tab{flex:1;padding:8px 2px;border:none;background:transparent;font-family:'DM Mono',monospace;font-size:0.6rem;font-weight:500;letter-spacing:0.8px;text-transform:uppercase;color:#4a6fa5;border-radius:7px;cursor:pointer;transition:all 0.15s;line-height:1.3;}
 .tab.active{background:#0d2b5e;color:#fff;box-shadow:0 2px 6px rgba(13,43,94,.3);}
@@ -36,6 +43,7 @@ textarea{resize:vertical;min-height:60px;}
 .btn-danger:hover{background:#ffeaea;}
 .btn-outline{background:transparent;color:#0d2b5e;border:1.5px solid #0d2b5e;font-size:0.68rem;padding:8px 12px;}
 .btn-outline:hover{background:#dbe6f4;}
+.btn-ghost{background:transparent;color:#4a6fa5;border:none;font-size:0.65rem;padding:5px 8px;text-decoration:underline;cursor:pointer;letter-spacing:0;}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
 .stat{background:linear-gradient(135deg,#fff,#eef3fa);border:1.5px solid #c2d5ee;border-radius:10px;padding:12px 8px;text-align:center;}
 .stat-val{font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;color:#0d2b5e;line-height:1;margin-bottom:3px;word-break:break-word;}
@@ -71,25 +79,74 @@ tr:hover td{background:#eef3fa;}
 .hidden{display:none;}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0d2b5e;color:#fff;padding:10px 20px;border-radius:20px;font-size:0.74rem;letter-spacing:1px;z-index:9999;white-space:nowrap;opacity:0;transition:opacity .25s;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0d2b5e;color:#fff;padding:10px 20px;border-radius:20px;font-size:0.74rem;letter-spacing:1px;z-index:9999;white-space:nowrap;opacity:0;transition:opacity .25s;pointer-events:none;}
 .toast.show{opacity:1;}
-@media print{.tabs,.btn,.filter-row{display:none!important;}.card{box-shadow:none;border:1px solid #ccc;}}
+/* Setup overlay */
+#setupOverlay{position:fixed;inset:0;background:#f0f4f8;z-index:10000;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 10px 40px;}
+#setupOverlay.hidden{display:none;}
+.setup-card{background:#fff;border:1.5px solid #c2d5ee;border-radius:14px;padding:22px;max-width:420px;width:100%;box-shadow:0 4px 20px rgba(13,43,94,.1);}
+.setup-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:#0d2b5e;margin-bottom:6px;}
+.setup-sub{font-size:0.72rem;color:#4a6fa5;margin-bottom:18px;line-height:1.5;}
+.setup-step{background:#eef3fa;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.74rem;color:#0d2b5e;line-height:1.6;}
+.setup-step b{display:block;margin-bottom:2px;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;color:#4a6fa5;}
+.setup-step a{color:#0d2b5e;font-weight:600;}
+.setup-divider{border:none;border-top:1px dashed #c2d5ee;margin:16px 0;}
+.setup-fg{margin-bottom:10px;}
+.err-msg{color:#c0392b;font-size:0.72rem;margin-top:8px;display:none;}
+@media print{.tabs,.btn,.filter-row,#setupOverlay{display:none!important;}.card{box-shadow:none;border:1px solid #ccc;}}
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ══ FIREBASE SETUP OVERLAY ══ -->
+<div id="setupOverlay">
+  <div class="setup-card">
+    <div style="text-align:center;margin-bottom:14px;font-size:36px;">🥚</div>
+    <div class="setup-title">Connect to Firebase</div>
+    <div class="setup-sub">To sync data across all devices in real-time, connect a free Firebase project. Follow these steps:</div>
+
+    <div class="setup-step">
+      <b>Step 1 — Create project</b>
+      Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Add project → name it (e.g. "SaiyasoneFarm") → Continue.
+    </div>
+    <div class="setup-step">
+      <b>Step 2 — Add web app</b>
+      In your project, click the <b>&lt;/&gt;</b> icon → Register app → copy the <b>firebaseConfig</b> object values below.
+    </div>
+    <div class="setup-step">
+      <b>Step 3 — Enable Firestore</b>
+      Go to <b>Build → Firestore Database</b> → Create database → choose <b>Start in test mode</b> → select a region → Done.
+    </div>
+
+    <hr class="setup-divider"/>
+    <div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#4a6fa5;margin-bottom:12px;">Paste your Firebase config</div>
+
+    <div class="setup-fg"><label>API Key</label><input type="text" id="cfg-apiKey" placeholder="AIzaSy..."/></div>
+    <div class="setup-fg"><label>Auth Domain</label><input type="text" id="cfg-authDomain" placeholder="your-project.firebaseapp.com"/></div>
+    <div class="setup-fg"><label>Project ID</label><input type="text" id="cfg-projectId" placeholder="your-project-id"/></div>
+    <div class="setup-fg"><label>App ID</label><input type="text" id="cfg-appId" placeholder="1:123456789:web:abc..."/></div>
+
+    <div class="err-msg" id="setup-err">Please fill in all fields.</div>
+    <button class="btn btn-primary" onclick="saveConfig()">Connect &amp; Start →</button>
+    <div style="text-align:center;margin-top:10px;">
+      <button class="btn-ghost btn" onclick="useLocalMode()">Skip — use local storage only</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div class="app" id="mainApp" style="display:none;">
   <div class="toast" id="toast"></div>
 
   <div class="hdr">
     <span class="hdr-icon">🥚</span>
     <h1>Saiyasone Farm</h1>
-    <p></p>
+    <p>Collect · Sell · Report · 1 Tray = 30 Eggs</p>
+    <div class="hdr-sync" id="syncStatus"><div class="dot"></div><span id="syncLabel">Connecting...</span></div>
   </div>
 
-  <!-- Top stats -->
   <div class="stat-grid" id="topStats"></div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('stock')">🥚 Stock</button>
     <button class="tab" onclick="switchTab('sell')">💰 Sell</button>
@@ -98,7 +155,7 @@ tr:hover td{background:#eef3fa;}
     <button class="tab" onclick="switchTab('annual')">📊 Annual</button>
   </div>
 
-  <!-- STOCK TAB -->
+  <!-- STOCK -->
   <div class="tab-panel active" id="panel-stock">
     <div class="card">
       <div class="card-title">🥚 Log Daily Collection</div>
@@ -119,7 +176,7 @@ tr:hover td{background:#eef3fa;}
     </div>
   </div>
 
-  <!-- SELL TAB -->
+  <!-- SELL -->
   <div class="tab-panel hidden" id="panel-sell">
     <div class="card">
       <div class="card-title">💰 Record a Sale</div>
@@ -143,7 +200,7 @@ tr:hover td{background:#eef3fa;}
     </div>
   </div>
 
-  <!-- DAILY TAB -->
+  <!-- DAILY -->
   <div class="tab-panel hidden" id="panel-daily">
     <div class="card">
       <div class="sec-hdr">
@@ -157,7 +214,7 @@ tr:hover td{background:#eef3fa;}
     </div>
   </div>
 
-  <!-- MONTHLY TAB -->
+  <!-- MONTHLY -->
   <div class="tab-panel hidden" id="panel-monthly">
     <div class="card">
       <div class="sec-hdr">
@@ -171,7 +228,7 @@ tr:hover td{background:#eef3fa;}
     </div>
   </div>
 
-  <!-- ANNUAL TAB -->
+  <!-- ANNUAL -->
   <div class="tab-panel hidden" id="panel-annual">
     <div class="card">
       <div class="sec-hdr">
@@ -183,43 +240,44 @@ tr:hover td{background:#eef3fa;}
   </div>
 </div>
 
-<script>
-const SALES_KEY = 'saiyasone-sales';
-const STOCK_KEY = 'saiyasone-stock';
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 const EPT = 30;
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CFG_KEY = 'saiyasone-firebase-cfg';
+const LOCAL_SALES = 'saiyasone-sales-local';
+const LOCAL_STOCK = 'saiyasone-stock-local';
 
-let sales = [], stock = [];
-
-// ── Storage ──
-function loadData() {
-  try { sales = JSON.parse(localStorage.getItem(SALES_KEY)) || []; } catch { sales = []; }
-  try { stock = JSON.parse(localStorage.getItem(STOCK_KEY)) || []; } catch { stock = []; }
-}
-function saveSalesData() { localStorage.setItem(SALES_KEY, JSON.stringify(sales)); }
-function saveStockData() { localStorage.setItem(STOCK_KEY, JSON.stringify(stock)); }
+let sales = [], stock = [], db = null, localMode = false;
+let unsubSales = null, unsubStock = null;
 
 // ── Helpers ──
-function fc(v) { return '₭' + Number(v||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
-function fd(s) { if(!s) return ''; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function toTrays(e) { return { trays: Math.floor(e/EPT), rem: e%EPT }; }
+const fc = v => '₭' + Number(v||0).toLocaleString('en-US',{maximumFractionDigits:0});
+const fd = s => { if(!s) return ''; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+const todayStr = () => new Date().toISOString().slice(0,10);
+const toTrays = e => ({ trays: Math.floor(e/EPT), rem: e%EPT });
 function trayLabel(e) {
   const {trays,rem} = toTrays(e);
   if(trays===0) return `${rem} eggs`;
   if(rem===0) return `${trays} tray${trays>1?'s':''}`;
   return `${trays} tray${trays>1?'s':''} + ${rem} eggs`;
 }
-function totalEggsCollected() { return stock.reduce((s,r)=>s+r.eggs,0); }
-function totalEggsSold() { return sales.reduce((s,r)=>s+r.trays*EPT,0); }
-function stockOnHand() { return Math.max(0, totalEggsCollected()-totalEggsSold()); }
+const totalEggsCollected = () => stock.reduce((s,r)=>s+r.eggs,0);
+const totalEggsSold = () => sales.reduce((s,r)=>s+r.trays*EPT,0);
+const stockOnHand = () => Math.max(0, totalEggsCollected()-totalEggsSold());
 function getYears() {
   const ys = [...new Set([...sales.map(r=>r.date.slice(0,4)),...stock.map(r=>r.date.slice(0,4))])].sort((a,b)=>b-a);
   const cy = String(new Date().getFullYear());
   if(!ys.includes(cy)) ys.unshift(cy);
   return ys;
 }
-function monthLabel(m) { const [y,mo]=m.split('-'); return `${MONTHS[parseInt(mo)-1]} ${y}`; }
+const monthLabel = m => { const [y,mo]=m.split('-'); return `${MONTHS[parseInt(mo)-1]} ${y}`; };
 
 // ── Toast ──
 function showToast(msg) {
@@ -228,158 +286,108 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-// ── Tab switching ──
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((b,i)=>{
-    const names=['stock','sell','daily','monthly','annual'];
-    b.classList.toggle('active', names[i]===name);
-  });
-  document.querySelectorAll('.tab-panel').forEach(p=>{
-    p.classList.remove('active');
-    p.classList.add('hidden');
-  });
-  const panel = document.getElementById('panel-'+name);
-  panel.classList.remove('hidden');
-  panel.classList.add('active');
-  if(name==='daily') renderDaily();
-  if(name==='monthly') renderMonthly();
-  if(name==='annual') renderAnnual();
+// ── Sync status ──
+function setSyncStatus(state, label) {
+  const el = document.getElementById('syncStatus');
+  const lb = document.getElementById('syncLabel');
+  el.className = 'hdr-sync ' + state;
+  lb.textContent = label;
+}
+
+// ── Setup / Config ──
+window.saveConfig = function() {
+  const apiKey = document.getElementById('cfg-apiKey').value.trim();
+  const authDomain = document.getElementById('cfg-authDomain').value.trim();
+  const projectId = document.getElementById('cfg-projectId').value.trim();
+  const appId = document.getElementById('cfg-appId').value.trim();
+  const err = document.getElementById('setup-err');
+  if(!apiKey||!authDomain||!projectId||!appId){ err.style.display='block'; return; }
+  err.style.display='none';
+  const cfg = { apiKey, authDomain, projectId, appId };
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  document.getElementById('setupOverlay').classList.add('hidden');
+  document.getElementById('mainApp').style.display='block';
+  initFirebase(cfg);
+};
+
+window.useLocalMode = function() {
+  localMode = true;
+  document.getElementById('setupOverlay').classList.add('hidden');
+  document.getElementById('mainApp').style.display='block';
+  setSyncStatus('error','Local only');
+  loadLocalData();
+  initUI();
   renderAll();
-}
+};
 
-// ── Render top stats ──
-function renderTopStats() {
-  const soh = stockOnHand();
-  const tec = totalEggsCollected();
-  const tSold = sales.reduce((s,r)=>s+r.trays,0);
-  const income = sales.reduce((s,r)=>s+r.total,0);
-  document.getElementById('topStats').innerHTML = `
-    <div class="stat"><div class="stat-val">${trayLabel(soh)}</div><div class="stat-lbl">Stock on Hand</div></div>
-    <div class="stat"><div class="stat-val">${trayLabel(tec)}</div><div class="stat-lbl">Total Collected</div></div>
-    <div class="stat"><div class="stat-val">${tSold} trays</div><div class="stat-lbl">Total Sold</div></div>
-    <div class="stat"><div class="stat-val">${fc(income)}</div><div class="stat-lbl">Total Income</div></div>
-  `;
-}
-
-// ── Render stock tab ──
-function renderStockTab() {
-  const tec = totalEggsCollected();
-  const tes = totalEggsSold();
-  const soh = stockOnHand();
-  const {trays: traysOH, rem: remOH} = toTrays(soh);
-
-  document.getElementById('stockStats').innerHTML = `
-    <div class="stat"><div class="stat-val">${tec}</div><div class="stat-lbl">Collected (eggs)</div></div>
-    <div class="stat"><div class="stat-val">${tes}</div><div class="stat-lbl">Sold (eggs)</div></div>
-    <div class="stat"><div class="stat-val" style="color:${soh===0?'#4a6fa5':'#0d2b5e'}">${soh}</div><div class="stat-lbl">On Hand (eggs)</div></div>
-    <div class="stat"><div class="stat-val">${trayLabel(soh)}</div><div class="stat-lbl">On Hand (trays)</div></div>
-  `;
-
-  let trayHTML = `<div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#4a6fa5;margin-bottom:8px;">
-    On Hand = ${traysOH>0?traysOH+' complete tray'+(traysOH>1?'s':'')+' ':''} ${remOH>0?'+ '+remOH+' loose egg'+(remOH>1?'s':''):''}${soh===0?'No eggs in stock':''}
-  </div>`;
-  if(remOH > 0) {
-    let dots = '';
-    for(let i=0;i<EPT;i++) dots += `<div class="egg-dot${i<remOH?' partial':''}"></div>`;
-    trayHTML += `<div style="font-size:0.7rem;color:#4a6fa5;margin-bottom:5px;">Partial tray: ${remOH}/${EPT} eggs</div>
-    <div class="tray-visual">${dots}</div>`;
+function initFirebase(cfg) {
+  try {
+    const app = initializeApp(cfg);
+    db = getFirestore(app);
+    setSyncStatus('', 'Connecting...');
+    subscribeRealtime();
+  } catch(e) {
+    setSyncStatus('error','Config error');
+    console.error(e);
   }
-  document.getElementById('trayVisual').innerHTML = trayHTML;
-
-  // History with running totals
-  const sorted = [...stock].sort((a,b)=>a.date.localeCompare(b.date));
-  let running = 0;
-  const withRunning = sorted.map(r=>{ running+=r.eggs; return {...r,running}; }).reverse();
-
-  if(withRunning.length===0) {
-    document.getElementById('stockHistory').innerHTML = `<div class="empty"><div class="ico">🐔</div><p>No collections yet. Log your first batch!</p></div>`;
-    return;
-  }
-  let rows = withRunning.map(r=>{
-    const {trays,rem} = toTrays(r.eggs);
-    const rt = toTrays(r.running);
-    const trayStr = (trays>0?trays+'T':'')+(trays>0&&rem>0?' + ':'')+(rem>0?rem+' eggs':'')+(trays===0&&rem===0?'0':'');
-    const runStr = (rt.trays>0?rt.trays+' tray'+(rt.trays>1?'s':''):'')+(rt.trays>0&&rt.rem>0?' + ':'')+(rt.rem>0?rt.rem+' eggs':'')+(r.running===0?'0 eggs':'');
-    return `<tr>
-      <td>${fd(r.date)}</td>
-      <td><b style="color:#0d2b5e">${r.eggs}</b></td>
-      <td><span class="badge badge-br">${trayStr}</span></td>
-      <td><span class="info-pill">${runStr}</span></td>
-      <td style="color:#4a6fa5;font-size:0.72rem">${r.notes||'—'}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="delStock(${r.id})">✕</button></td>
-    </tr>`;
-  }).join('');
-  document.getElementById('stockHistory').innerHTML = `
-    <div class="table-wrap"><table>
-      <thead><tr><th>Date</th><th>Eggs</th><th>In Trays</th><th>Running Total</th><th>Notes</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
 }
 
-// ── Render sell tab ──
-function renderSellTab() {
-  const soh = stockOnHand();
-  document.getElementById('sellStockInfo').innerHTML = `📦 Available stock: <b>${trayLabel(soh)}</b> (${soh} eggs)`;
-
-  if(sales.length===0){ document.getElementById('recentSales').innerHTML=''; return; }
-  let rows = sales.slice(0,10).map(r=>`<tr>
-    <td>${fd(r.date)}</td>
-    <td><span class="badge badge-br">${r.eggType}</span></td>
-    <td><b style="color:#0d2b5e">${r.trays}</b></td>
-    <td>${fc(r.pricePerTray)}</td>
-    <td style="font-weight:600;color:#0d2b5e">${fc(r.total)}</td>
-    <td style="color:#4a6fa5;font-size:0.72rem">${r.buyer||'—'}</td>
-    <td><button class="btn btn-danger btn-sm" onclick="delSale(${r.id})">✕</button></td>
-  </tr>`).join('');
-  document.getElementById('recentSales').innerHTML = `
-    <div style="margin-top:14px;">
-      <div style="font-size:0.68rem;letter-spacing:1.8px;text-transform:uppercase;color:#4a6fa5;margin-bottom:10px;">Recent Sales</div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Type</th><th>Trays</th><th>₭/Tray</th><th>Total</th><th>Buyer</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>
-    </div>`;
+function subscribeRealtime() {
+  // Sales listener
+  if(unsubSales) unsubSales();
+  unsubSales = onSnapshot(
+    query(collection(db,'sales'), orderBy('date','desc')),
+    snap => {
+      sales = snap.docs.map(d=>({id:d.id,...d.data()}));
+      setSyncStatus('connected','Live sync ✓');
+      renderAll();
+    },
+    err => { setSyncStatus('error','Sync error'); console.error(err); }
+  );
+  // Stock listener
+  if(unsubStock) unsubStock();
+  unsubStock = onSnapshot(
+    query(collection(db,'stock'), orderBy('date','desc')),
+    snap => {
+      stock = snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderAll();
+    },
+    err => console.error(err)
+  );
 }
 
-// ── Preview helpers ──
-function updateStockPreview() {
-  const n = parseInt(document.getElementById('st-eggs').value);
-  const box = document.getElementById('stock-preview');
-  if(!n||n<1){ box.classList.add('hidden'); return; }
-  const {trays,rem} = toTrays(n);
-  let msg = `🥚 <b>${n}</b> eggs = <b>${trayLabel(n)}</b>`;
-  if(rem>0) msg += ` &nbsp;<span style="color:#4a6fa5;font-size:0.75rem">Need ${EPT-rem} more for next tray</span>`;
-  else msg += ` &nbsp;<span style="color:#1a6b2e;font-size:0.75rem">✓ ${trays} complete tray(s)</span>`;
-  box.innerHTML = msg;
-  box.classList.remove('hidden');
+// ── Local fallback ──
+function loadLocalData() {
+  try { sales = JSON.parse(localStorage.getItem(LOCAL_SALES))||[]; } catch { sales=[]; }
+  try { stock = JSON.parse(localStorage.getItem(LOCAL_STOCK))||[]; } catch { stock=[]; }
 }
-function updateSalePreview() {
-  const t = parseFloat(document.getElementById('sl-trays').value);
-  const p = parseFloat(document.getElementById('sl-price').value);
-  const box = document.getElementById('sale-preview');
-  if(!t||!p){ box.classList.add('hidden'); return; }
-  box.innerHTML = `🥚 ${t} tray(s) × ${fc(p)} = <b>${fc(t*p)}</b> &nbsp;<span style="color:#4a6fa5">= ${t*EPT} eggs</span>`;
-  box.classList.remove('hidden');
+function saveLocal() {
+  localStorage.setItem(LOCAL_SALES, JSON.stringify(sales));
+  localStorage.setItem(LOCAL_STOCK, JSON.stringify(stock));
 }
 
 // ── Add stock ──
-function addStock() {
+window.addStock = async function() {
   const date = document.getElementById('st-date').value;
   const eggs = parseInt(document.getElementById('st-eggs').value);
   const notes = document.getElementById('st-notes').value.trim();
   if(!date||!eggs||eggs<1){ alert('Please enter the date and a valid egg count.'); return; }
-  stock.push({id:Date.now(), date, eggs, notes});
-  stock.sort((a,b)=>b.date.localeCompare(a.date));
-  saveStockData();
+  const rec = { date, eggs, notes, createdAt: Date.now() };
+  if(db && !localMode) {
+    try { await addDoc(collection(db,'stock'), rec); showToast(`✓ ${eggs} eggs logged`); }
+    catch(e){ alert('Error saving: '+e.message); return; }
+  } else {
+    rec.id = Date.now().toString();
+    stock.unshift(rec); stock.sort((a,b)=>b.date.localeCompare(a.date));
+    saveLocal(); showToast(`✓ ${eggs} eggs logged`); renderAll();
+  }
   document.getElementById('st-eggs').value='';
   document.getElementById('st-notes').value='';
   document.getElementById('stock-preview').classList.add('hidden');
-  showToast(`✓ ${eggs} eggs logged`);
-  renderAll();
-}
+};
 
 // ── Add sale ──
-function addSale() {
+window.addSale = async function() {
   const date = document.getElementById('sl-date').value;
   const eggType = document.getElementById('sl-type').value;
   const trays = parseFloat(document.getElementById('sl-trays').value);
@@ -387,183 +395,261 @@ function addSale() {
   const buyer = document.getElementById('sl-buyer').value.trim();
   const notes = document.getElementById('sl-notes').value.trim();
   if(!date||!trays||!pricePerTray){ alert('Please fill in Date, Trays Sold, and Price per Tray.'); return; }
-  sales.push({id:Date.now(), date, eggType, trays, pricePerTray, total:trays*pricePerTray, buyer, notes});
-  sales.sort((a,b)=>b.date.localeCompare(a.date));
-  saveSalesData();
+  const rec = { date, eggType, trays, pricePerTray, total: trays*pricePerTray, buyer, notes, createdAt: Date.now() };
+  if(db && !localMode) {
+    try { await addDoc(collection(db,'sales'), rec); showToast('✓ Sale recorded'); }
+    catch(e){ alert('Error saving: '+e.message); return; }
+  } else {
+    rec.id = Date.now().toString();
+    sales.unshift(rec); sales.sort((a,b)=>b.date.localeCompare(a.date));
+    saveLocal(); showToast('✓ Sale recorded'); renderAll();
+  }
   document.getElementById('sl-trays').value='';
   document.getElementById('sl-price').value='';
   document.getElementById('sl-buyer').value='';
   document.getElementById('sl-notes').value='';
   document.getElementById('sale-preview').classList.add('hidden');
-  showToast('✓ Sale recorded');
-  renderAll();
-}
+};
 
 // ── Delete ──
-function delStock(id) {
+window.delStock = async function(id) {
   if(!confirm('Delete this entry?')) return;
-  stock = stock.filter(r=>r.id!==id);
-  saveStockData(); showToast('Deleted'); renderAll();
-}
-function delSale(id) {
+  if(db && !localMode) {
+    try { await deleteDoc(doc(db,'stock',id)); showToast('Deleted'); }
+    catch(e){ alert('Error: '+e.message); }
+  } else {
+    stock = stock.filter(r=>r.id!==id);
+    saveLocal(); showToast('Deleted'); renderAll();
+  }
+};
+window.delSale = async function(id, rerender) {
   if(!confirm('Delete this sale?')) return;
-  sales = sales.filter(r=>r.id!==id);
-  saveSalesData(); showToast('Deleted'); renderAll();
+  if(db && !localMode) {
+    try { await deleteDoc(doc(db,'sales',id)); showToast('Deleted'); }
+    catch(e){ alert('Error: '+e.message); }
+  } else {
+    sales = sales.filter(r=>r.id!==id);
+    saveLocal(); showToast('Deleted'); renderAll();
+    if(rerender) switchTab(rerender);
+  }
+};
+
+// ── Previews ──
+window.updateStockPreview = function() {
+  const n = parseInt(document.getElementById('st-eggs').value);
+  const box = document.getElementById('stock-preview');
+  if(!n||n<1){ box.classList.add('hidden'); return; }
+  const {trays,rem} = toTrays(n);
+  let msg = `🥚 <b>${n}</b> eggs = <b>${trayLabel(n)}</b>`;
+  if(rem>0) msg += ` &nbsp;<span style="color:#4a6fa5;font-size:0.75rem">Need ${EPT-rem} more for next tray</span>`;
+  else msg += ` &nbsp;<span style="color:#1a6b2e;font-size:0.75rem">✓ ${trays} complete tray(s)</span>`;
+  box.innerHTML = msg; box.classList.remove('hidden');
+};
+window.updateSalePreview = function() {
+  const t = parseFloat(document.getElementById('sl-trays').value);
+  const p = parseFloat(document.getElementById('sl-price').value);
+  const box = document.getElementById('sale-preview');
+  if(!t||!p){ box.classList.add('hidden'); return; }
+  box.innerHTML = `🥚 ${t} tray(s) × ${fc(p)} = <b>${fc(t*p)}</b> &nbsp;<span style="color:#4a6fa5">= ${t*EPT} eggs</span>`;
+  box.classList.remove('hidden');
+};
+
+// ── Tab ──
+window.switchTab = function(name) {
+  document.querySelectorAll('.tab').forEach((b,i)=>{
+    b.classList.toggle('active',['stock','sell','daily','monthly','annual'][i]===name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p=>{ p.classList.remove('active'); p.classList.add('hidden'); });
+  const panel = document.getElementById('panel-'+name);
+  panel.classList.remove('hidden'); panel.classList.add('active');
+  if(name==='daily') renderDaily();
+  if(name==='monthly') renderMonthly();
+  if(name==='annual') renderAnnual();
+  renderTopStats(); renderStockTab(); renderSellTab();
+};
+
+// ── Renders ──
+function renderTopStats() {
+  const soh = stockOnHand();
+  document.getElementById('topStats').innerHTML = `
+    <div class="stat"><div class="stat-val">${trayLabel(soh)}</div><div class="stat-lbl">Stock on Hand</div></div>
+    <div class="stat"><div class="stat-val">${trayLabel(totalEggsCollected())}</div><div class="stat-lbl">Total Collected</div></div>
+    <div class="stat"><div class="stat-val">${sales.reduce((s,r)=>s+r.trays,0)} trays</div><div class="stat-lbl">Total Sold</div></div>
+    <div class="stat"><div class="stat-val">${fc(sales.reduce((s,r)=>s+r.total,0))}</div><div class="stat-lbl">Total Income</div></div>`;
 }
 
-// ── Daily Report ──
-function renderDaily() {
-  const fm = document.getElementById('filter-month').value;
-  const ds = sales.filter(r=>r.date.startsWith(fm));
-  const dstock = stock.filter(r=>r.date.startsWith(fm));
-  const collectedEggs = dstock.reduce((s,r)=>s+r.eggs,0);
-  const income = ds.reduce((s,r)=>s+r.total,0);
-  const traysSold = ds.reduce((s,r)=>s+r.trays,0);
+function renderStockTab() {
+  const tec=totalEggsCollected(), tes=totalEggsSold(), soh=stockOnHand();
+  const {trays:tOH,rem:rOH} = toTrays(soh);
+  document.getElementById('stockStats').innerHTML = `
+    <div class="stat"><div class="stat-val">${tec}</div><div class="stat-lbl">Collected</div></div>
+    <div class="stat"><div class="stat-val">${tes}</div><div class="stat-lbl">Sold</div></div>
+    <div class="stat"><div class="stat-val" style="color:${soh===0?'#4a6fa5':'#0d2b5e'}">${soh}</div><div class="stat-lbl">On Hand (eggs)</div></div>
+    <div class="stat"><div class="stat-val">${trayLabel(soh)}</div><div class="stat-lbl">On Hand (trays)</div></div>`;
 
-  let html = `<div class="info-box info-box-green">🐔 Collected this month: <b>${collectedEggs} eggs</b> = <b>${trayLabel(collectedEggs)}</b></div>
+  let tv = `<div style="font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#4a6fa5;margin-bottom:8px;">
+    On Hand = ${tOH>0?tOH+' complete tray'+(tOH>1?'s':'')+' ':''}${rOH>0?'+ '+rOH+' loose egg'+(rOH>1?'s':''):''}${soh===0?'No eggs in stock':''}</div>`;
+  if(rOH>0){
+    let dots=''; for(let i=0;i<EPT;i++) dots+=`<div class="egg-dot${i<rOH?' partial':''}"></div>`;
+    tv+=`<div style="font-size:0.7rem;color:#4a6fa5;margin-bottom:5px;">Partial tray: ${rOH}/${EPT}</div><div class="tray-visual">${dots}</div>`;
+  }
+  document.getElementById('trayVisual').innerHTML = tv;
+
+  const sorted=[...stock].sort((a,b)=>a.date.localeCompare(b.date));
+  let running=0;
+  const wr=sorted.map(r=>{ running+=r.eggs; return {...r,running}; }).reverse();
+  if(!wr.length){ document.getElementById('stockHistory').innerHTML=`<div class="empty"><div class="ico">🐔</div><p>No collections yet.</p></div>`; return; }
+  const rows=wr.map(r=>{
+    const {trays,rem}=toTrays(r.eggs), rt=toTrays(r.running);
+    const ts=(trays>0?trays+'T':'')+(trays>0&&rem>0?' + ':'')+(rem>0?rem+' eggs':'')+(trays===0&&rem===0?'0':'');
+    const rs=(rt.trays>0?rt.trays+' tray'+(rt.trays>1?'s':''):'')+(rt.trays>0&&rt.rem>0?' + ':'')+(rt.rem>0?rt.rem+' eggs':'')+(r.running===0?'0 eggs':'');
+    return `<tr><td>${fd(r.date)}</td><td><b style="color:#0d2b5e">${r.eggs}</b></td>
+      <td><span class="badge badge-br">${ts}</span></td>
+      <td><span class="info-pill">${rs}</span></td>
+      <td style="color:#4a6fa5;font-size:0.72rem">${r.notes||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="delStock('${r.id}')">✕</button></td></tr>`;
+  }).join('');
+  document.getElementById('stockHistory').innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Eggs</th><th>In Trays</th><th>Running Total</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function renderSellTab() {
+  const soh=stockOnHand();
+  document.getElementById('sellStockInfo').innerHTML=`📦 Available stock: <b>${trayLabel(soh)}</b> (${soh} eggs)`;
+  if(!sales.length){ document.getElementById('recentSales').innerHTML=''; return; }
+  const rows=sales.slice(0,10).map(r=>`<tr>
+    <td>${fd(r.date)}</td><td><span class="badge badge-br">${r.eggType}</span></td>
+    <td><b style="color:#0d2b5e">${r.trays}</b></td><td>${fc(r.pricePerTray)}</td>
+    <td style="font-weight:600;color:#0d2b5e">${fc(r.total)}</td>
+    <td style="color:#4a6fa5;font-size:0.72rem">${r.buyer||'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delSale('${r.id}')">✕</button></td></tr>`).join('');
+  document.getElementById('recentSales').innerHTML=`<div style="margin-top:14px;">
+    <div style="font-size:0.68rem;letter-spacing:1.8px;text-transform:uppercase;color:#4a6fa5;margin-bottom:10px;">Recent Sales</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Type</th><th>Trays</th><th>₭/Tray</th><th>Total</th><th>Buyer</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`;
+}
+
+window.renderDaily = function() {
+  const fm=document.getElementById('filter-month').value;
+  const ds=sales.filter(r=>r.date.startsWith(fm));
+  const dstock=stock.filter(r=>r.date.startsWith(fm));
+  const col=dstock.reduce((s,r)=>s+r.eggs,0);
+  const income=ds.reduce((s,r)=>s+r.total,0);
+  const traysSold=ds.reduce((s,r)=>s+r.trays,0);
+  let html=`<div class="info-box info-box-green">🐔 Collected this month: <b>${col} eggs</b> = <b>${trayLabel(col)}</b></div>
   <div class="stat-grid" style="margin-bottom:14px;">
     <div class="stat"><div class="stat-val">${fc(income)}</div><div class="stat-lbl">Month Income</div></div>
     <div class="stat"><div class="stat-val">${traysSold} trays</div><div class="stat-lbl">Trays Sold</div></div>
     <div class="stat"><div class="stat-val">${ds.length}</div><div class="stat-lbl">Transactions</div></div>
   </div>`;
-
-  if(ds.length===0){ html += `<div class="empty"><div class="ico">🥚</div><p>No sales for ${monthLabel(fm)}</p></div>`; }
+  if(!ds.length) html+=`<div class="empty"><div class="ico">🥚</div><p>No sales for ${monthLabel(fm)}</p></div>`;
   else {
-    let rows = ds.map(r=>`<tr>
-      <td>${fd(r.date)}</td><td><span class="badge badge-br">${r.eggType}</span></td>
-      <td><b style="color:#0d2b5e">${r.trays}</b></td>
-      <td style="color:#4a6fa5">${r.trays*EPT}</td>
-      <td>${fc(r.pricePerTray)}</td>
-      <td style="font-weight:600;color:#0d2b5e">${fc(r.total)}</td>
+    let rows=ds.map(r=>`<tr><td>${fd(r.date)}</td><td><span class="badge badge-br">${r.eggType}</span></td>
+      <td><b style="color:#0d2b5e">${r.trays}</b></td><td style="color:#4a6fa5">${r.trays*EPT}</td>
+      <td>${fc(r.pricePerTray)}</td><td style="font-weight:600;color:#0d2b5e">${fc(r.total)}</td>
       <td style="color:#4a6fa5;font-size:0.72rem">${r.buyer||'—'}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="delSale(${r.id});switchTab('daily')">✕</button></td>
-    </tr>`).join('');
-    rows += `<tr class="totals-row">
-      <td colspan="2"><b>TOTAL</b></td>
-      <td><b>${traysSold}</b></td><td><b>${traysSold*EPT}</b></td><td></td>
-      <td><b>${fc(income)}</b></td><td colspan="2"></td>
-    </tr>`;
-    html += `<div class="table-wrap"><table>
-      <thead><tr><th>Date</th><th>Type</th><th>Trays</th><th>Eggs</th><th>₭/Tray</th><th>Total</th><th>Buyer</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
+      <td><button class="btn btn-danger btn-sm" onclick="delSale('${r.id}','daily')">✕</button></td></tr>`).join('');
+    rows+=`<tr class="totals-row"><td colspan="2"><b>TOTAL</b></td><td><b>${traysSold}</b></td><td><b>${traysSold*EPT}</b></td><td></td><td><b>${fc(income)}</b></td><td colspan="2"></td></tr>`;
+    html+=`<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Trays</th><th>Eggs</th><th>₭/Tray</th><th>Total</th><th>Buyer</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
-  document.getElementById('dailyContent').innerHTML = html;
-}
+  document.getElementById('dailyContent').innerHTML=html;
+};
 
-// ── Monthly Report ──
-function renderMonthly() {
-  const fy = document.getElementById('filter-year').value;
-  const filtered = sales.filter(r=>r.date.startsWith(fy));
-  const groups = {};
-  filtered.forEach(r=>{
-    const m = r.date.slice(0,7);
+window.renderMonthly = function() {
+  const fy=document.getElementById('filter-year').value;
+  const groups={};
+  sales.filter(r=>r.date.startsWith(fy)).forEach(r=>{
+    const m=r.date.slice(0,7);
     if(!groups[m]) groups[m]={month:m,records:[],total:0,trays:0};
     groups[m].records.push(r); groups[m].total+=r.total; groups[m].trays+=r.trays;
   });
-  const mData = Object.values(groups).sort((a,b)=>b.month.localeCompare(a.month));
-
-  if(mData.length===0){ document.getElementById('monthlyContent').innerHTML=`<div class="empty"><div class="ico">📦</div><p>No sales for ${fy}</p></div>`; return; }
-
-  let html = '';
+  const mData=Object.values(groups).sort((a,b)=>b.month.localeCompare(a.month));
+  if(!mData.length){ document.getElementById('monthlyContent').innerHTML=`<div class="empty"><div class="ico">📦</div><p>No sales for ${fy}</p></div>`; return; }
+  let html='';
   mData.forEach(mg=>{
-    let rows = mg.records.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>`<tr>
+    let rows=mg.records.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>`<tr>
       <td>${fd(r.date)}</td><td><span class="badge badge-br">${r.eggType}</span></td>
-      <td><b style="color:#0d2b5e">${r.trays}</b></td>
-      <td style="color:#4a6fa5">${r.trays*EPT}</td>
-      <td>${fc(r.pricePerTray)}</td>
-      <td style="font-weight:600;color:#0d2b5e">${fc(r.total)}</td>
-      <td style="color:#4a6fa5;font-size:0.72rem">${r.buyer||'—'}</td>
-    </tr>`).join('');
-    rows += `<tr class="totals-row"><td colspan="2"><b>MONTH TOTAL</b></td><td><b>${mg.trays}</b></td><td><b>${mg.trays*EPT}</b></td><td></td><td><b>${fc(mg.total)}</b></td><td></td></tr>`;
-    html += `<div class="month-hdr">${monthLabel(mg.month)}</div>
-    <div class="table-wrap"><table>
+      <td><b style="color:#0d2b5e">${r.trays}</b></td><td style="color:#4a6fa5">${r.trays*EPT}</td>
+      <td>${fc(r.pricePerTray)}</td><td style="font-weight:600;color:#0d2b5e">${fc(r.total)}</td>
+      <td style="color:#4a6fa5;font-size:0.72rem">${r.buyer||'—'}</td></tr>`).join('');
+    rows+=`<tr class="totals-row"><td colspan="2"><b>MONTH TOTAL</b></td><td><b>${mg.trays}</b></td><td><b>${mg.trays*EPT}</b></td><td></td><td><b>${fc(mg.total)}</b></td><td></td></tr>`;
+    html+=`<div class="month-hdr">${monthLabel(mg.month)}</div><div class="table-wrap"><table>
       <thead><tr><th>Date</th><th>Type</th><th>Trays</th><th>Eggs</th><th>₭/Tray</th><th>Total</th><th>Buyer</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
   });
-  const yearTotal = mData.reduce((s,m)=>s+m.total,0);
-  html += `<div class="year-total">
+  html+=`<div class="year-total">
     <span style="font-size:0.72rem;letter-spacing:1px;text-transform:uppercase;color:#4a6fa5;">Year ${fy} Total</span>
-    <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:1.25rem;color:#0d2b5e;">${fc(yearTotal)}</span>
+    <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:1.25rem;color:#0d2b5e;">${fc(mData.reduce((s,m)=>s+m.total,0))}</span>
   </div>`;
-  document.getElementById('monthlyContent').innerHTML = html;
-}
+  document.getElementById('monthlyContent').innerHTML=html;
+};
 
-// ── Annual Report ──
-function renderAnnual() {
-  const groups = {};
-  sales.forEach(r=>{
-    const y = r.date.slice(0,4);
-    if(!groups[y]) groups[y]={year:y,total:0,trays:0,count:0};
-    groups[y].total+=r.total; groups[y].trays+=r.trays; groups[y].count++;
-  });
-  const aData = Object.values(groups).sort((a,b)=>b.year-a.year);
-
-  if(aData.length===0){ document.getElementById('annualContent').innerHTML=`<div class="empty"><div class="ico">🌾</div><p>No sales yet. Start recording!</p></div>`; return; }
-
-  let rows = aData.map(r=>`<tr>
+window.renderAnnual = function() {
+  const groups={};
+  sales.forEach(r=>{ const y=r.date.slice(0,4); if(!groups[y]) groups[y]={year:y,total:0,trays:0,count:0}; groups[y].total+=r.total; groups[y].trays+=r.trays; groups[y].count++; });
+  const aData=Object.values(groups).sort((a,b)=>b.year-a.year);
+  if(!aData.length){ document.getElementById('annualContent').innerHTML=`<div class="empty"><div class="ico">🌾</div><p>No sales yet.</p></div>`; return; }
+  let rows=aData.map(r=>`<tr>
     <td><b style="font-family:'Playfair Display',serif;font-size:1rem;color:#0d2b5e">${r.year}</b></td>
     <td>${r.trays}</td><td style="color:#4a6fa5">${r.trays*EPT}</td><td>${r.count}</td>
     <td>${fc(r.total/r.count)}</td>
-    <td style="font-weight:700;color:#0d2b5e;font-family:'Playfair Display',serif;font-size:1rem">${fc(r.total)}</td>
-  </tr>`).join('');
-  const totT=aData.reduce((s,r)=>s+r.trays,0), totI=aData.reduce((s,r)=>s+r.total,0), totC=aData.reduce((s,r)=>s+r.count,0);
-  rows += `<tr class="totals-row"><td><b>ALL</b></td><td><b>${totT}</b></td><td><b>${totT*EPT}</b></td><td><b>${totC}</b></td><td></td><td><b>${fc(totI)}</b></td></tr>`;
+    <td style="font-weight:700;color:#0d2b5e;font-family:'Playfair Display',serif">${fc(r.total)}</td></tr>`).join('');
+  const tT=aData.reduce((s,r)=>s+r.trays,0),tI=aData.reduce((s,r)=>s+r.total,0),tC=aData.reduce((s,r)=>s+r.count,0);
+  rows+=`<tr class="totals-row"><td><b>ALL</b></td><td><b>${tT}</b></td><td><b>${tT*EPT}</b></td><td><b>${tC}</b></td><td></td><td><b>${fc(tI)}</b></td></tr>`;
+  const max=Math.max(...aData.map(r=>r.total));
+  const bars=aData.map(r=>`<div style="margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;font-size:0.74rem;margin-bottom:3px;">
+      <span style="color:#0d2b5e;font-weight:500">${r.year}</span><span style="color:#09204a;font-weight:700">${fc(r.total)}</span>
+    </div><div class="stock-bar"><div class="stock-bar-fill" style="width:${max>0?(r.total/max)*100:0}%"></div></div></div>`).join('');
+  document.getElementById('annualContent').innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Year</th><th>Trays</th><th>Eggs</th><th>Sales</th><th>Avg/Sale</th><th>Total</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div style="margin-top:14px;"><div style="font-size:0.66rem;letter-spacing:1.8px;text-transform:uppercase;color:#4a6fa5;margin-bottom:10px;">Income by Year</div>${bars}</div>`;
+};
 
-  const max = Math.max(...aData.map(r=>r.total));
-  let bars = aData.map(r=>{
-    const pct = max>0?(r.total/max)*100:0;
-    return `<div style="margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;font-size:0.74rem;margin-bottom:3px;">
-        <span style="color:#0d2b5e;font-weight:500">${r.year}</span>
-        <span style="color:#09204a;font-weight:700">${fc(r.total)}</span>
-      </div>
-      <div class="stock-bar"><div class="stock-bar-fill" style="width:${pct}%"></div></div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('annualContent').innerHTML = `
-    <div class="table-wrap"><table>
-      <thead><tr><th>Year</th><th>Trays</th><th>Eggs</th><th>Sales</th><th>Avg/Sale</th><th>Total</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    <div style="margin-top:14px;">
-      <div style="font-size:0.66rem;letter-spacing:1.8px;text-transform:uppercase;color:#4a6fa5;margin-bottom:10px;">Income by Year</div>
-      ${bars}
-    </div>`;
-}
-
-// ── Populate year selector ──
 function populateYearSelect() {
-  const sel = document.getElementById('filter-year');
-  const years = getYears();
-  const cur = sel.value || String(new Date().getFullYear());
-  sel.innerHTML = years.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}</option>`).join('');
+  const sel=document.getElementById('filter-year');
+  const years=getYears(), cur=sel.value||String(new Date().getFullYear());
+  sel.innerHTML=years.map(y=>`<option value="${y}"${y===cur?' selected':''}>${y}</option>`).join('');
 }
 
-// ── Render all ──
 function renderAll() {
-  renderTopStats();
-  renderStockTab();
-  renderSellTab();
-  populateYearSelect();
-  // Re-render active report if visible
-  const active = document.querySelector('.tab-panel.active');
-  if(active && active.id==='panel-daily') renderDaily();
-  if(active && active.id==='panel-monthly') renderMonthly();
-  if(active && active.id==='panel-annual') renderAnnual();
+  renderTopStats(); renderStockTab(); renderSellTab(); populateYearSelect();
+  const active=document.querySelector('.tab-panel.active');
+  if(active?.id==='panel-daily') renderDaily();
+  if(active?.id==='panel-monthly') renderMonthly();
+  if(active?.id==='panel-annual') renderAnnual();
 }
 
-// ── Init ──
-window.addEventListener('DOMContentLoaded', ()=>{
-  loadData();
-  // Set default dates
-  document.getElementById('st-date').value = todayStr();
-  document.getElementById('sl-date').value = todayStr();
-  // Set default month filter
-  const now = new Date();
-  document.getElementById('filter-month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+function initUI() {
+  document.getElementById('st-date').value=todayStr();
+  document.getElementById('sl-date').value=todayStr();
+  const now=new Date();
+  document.getElementById('filter-month').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   populateYearSelect();
-  renderAll();
-  });
+}
+
+// ── Boot ──
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem(CFG_KEY);
+  if(saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      document.getElementById('cfg-apiKey').value = cfg.apiKey||'AIzaSyCCx-lt4cjvKBhUvY1_yjaOOrI1-WcdF64';
+      document.getElementById('cfg-authDomain').value = cfg.authDomain||'egg-tracker-a0139.firebaseapp.com';
+      document.getElementById('cfg-projectId').value = cfg.projectId||'egg-tracker-a0139';
+      document.getElementById('cfg-appId').value = cfg.appId||'1:237132695300:web:a9c999e957d102a892f251';
+      document.getElementById('setupOverlay').classList.add('hidden');
+      document.getElementById('mainApp').style.display='block';
+      initUI();
+      initFirebase(cfg);
+    } catch { /* show setup */ }
+  }
+  // Always init UI fields in case setup is shown
+  initUI();
+});
 </script>
 </body>
 </html>
